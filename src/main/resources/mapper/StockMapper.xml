@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example1.mapper.StockMapper">
+
+    <!-- 条件更新：判断与扣减在同一条 SQL，原子完成 -->
+    <update id="deductIfEnough">
+        UPDATE t_stock
+        SET quantity = quantity - #{quantity},
+        version   = version + 1
+        WHERE branch_id   = #{branchId}
+        AND material_id = #{materialId}
+        AND quantity   >= #{quantity}
+    </update>
+
+    <!-- 不存在则插入，存在则累加（依赖 uk_branch_material 唯一索引） -->
+    <insert id="upsertStock">
+        INSERT INTO t_stock (branch_id, material_id, quantity, version)
+        VALUES (#{branchId}, #{materialId}, #{quantity}, 0)
+        ON DUPLICATE KEY UPDATE
+        quantity = quantity + #{quantity},
+        version  = version + 1
+    </insert>
+    <update id="addQuantity">
+        UPDATE t_stock
+        SET quantity = quantity + #{quantity},
+        version   = version + 1
+        WHERE branch_id   = #{branchId}
+        AND material_id = #{materialId}
+    </update>
+
+</mapper>
