@@ -28,5 +28,12 @@
         WHERE branch_id   = #{branchId}
         AND material_id = #{materialId}
     </update>
+    <update id="setQuantity">
+        UPDATE t_stock
+        SET quantity = #{quantity},
+        version   = version + 1
+        WHERE branch_id   = #{branchId}
+        AND material_id = #{materialId}
+    </update>
 
 </mapper>

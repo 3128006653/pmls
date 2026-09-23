@@ -18,4 +18,7 @@ public interface StockMapper extends BaseMapper<Stock> {
     int addQuantity(@Param("branchId") Long branchId,
                     @Param("materialId") Long materialId,
                     @Param("quantity") int quantity);
+    int setQuantity(@Param("branchId") Long branchId,
+                    @Param("materialId") Long materialId,
+                    @Param("quantity") int quantity);
 }
