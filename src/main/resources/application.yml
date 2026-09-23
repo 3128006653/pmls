@@ -21,3 +21,6 @@ mybatis-plus:
 logging:
   level:
     com.example1.mapper: debug
+jwt:
+  secret: pmls-secret-key-please-change-to-your-own-random-string-32bytes
+  expire-minutes: 120

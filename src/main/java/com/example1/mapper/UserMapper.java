@@ -1,0 +1,7 @@
+package com.example1.mapper;
+
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.example1.entity.User;
+
+public interface UserMapper extends BaseMapper<User> {
+}
