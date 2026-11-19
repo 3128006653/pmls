@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example1.mapper.MaterialMapper">
+
+    <insert id="insertBatch">
+        INSERT INTO t_material (name, category_id, spec, unit, safe_stock, status, deleted)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.name}, #{item.categoryId}, #{item.spec}, #{item.unit}, #{item.safeStock}, 1, 0)
+        </foreach>
+    </insert>
+
+</mapper>
