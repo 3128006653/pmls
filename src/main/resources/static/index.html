@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PMLS 网点物资管理系统 · 演示台</title>
+<style>
+  :root { --bg:#f5f7fa; --card:#fff; --line:#e5e9f0; --main:#2563eb; --main2:#1d4ed8; --text:#1f2937; --muted:#6b7280; --ok:#059669; --warn:#d97706; --err:#dc2626; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:"Microsoft YaHei","PingFang SC",Arial,sans-serif; background:var(--bg); color:var(--text); font-size:14px; }
+  header { background:linear-gradient(120deg,#1e3a8a,#2563eb); color:#fff; padding:14px 24px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; font-weight:600; letter-spacing:.5px; }
+  header .sub { font-size:12px; opacity:.8; }
+  .login { margin-left:auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  input, select { border:1px solid var(--line); border-radius:6px; padding:7px 10px; font-size:13px; outline:none; background:#fff; color:var(--text); }
+  input:focus, select:focus { border-color:var(--main); }
+  input[type=text], input[type=password], input[type=number] { min-width:110px; }
+  button { border:0; border-radius:6px; padding:8px 14px; background:var(--main); color:#fff; cursor:pointer; font-size:13px; }
+  button:hover { background:var(--main2); }
+  button.ghost { background:#eef2ff; color:var(--main2); }
+  button.ghost:hover { background:#dbeafe; }
+  button.danger { background:#fee2e2; color:var(--err); }
+  .layout { display:flex; min-height:calc(100vh - 60px); }
+  nav { width:190px; background:#fff; border-right:1px solid var(--line); padding:12px 0; flex-shrink:0; }
+  nav a { display:block; padding:11px 22px; color:var(--text); text-decoration:none; cursor:pointer; border-left:3px solid transparent; }
+  nav a:hover { background:#f3f6fc; }
+  nav a.on { background:#eff6ff; border-left-color:var(--main); color:var(--main2); font-weight:600; }
+  main { flex:1; padding:22px 26px; max-width:1200px; }
+  section { display:none; }
+  section.on { display:block; }
+  h2 { font-size:16px; margin:0 0 14px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,.03); }
+  .card h3 { font-size:14px; margin:0 0 12px; color:var(--main2); }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+  .row label { color:var(--muted); font-size:12px; min-width:64px; }
+  .tip { font-size:12px; color:var(--muted); line-height:1.7; }
+  .status { font-size:12px; padding:3px 9px; border-radius:20px; background:#fef3c7; color:var(--warn); }
+  .status.ok { background:#d1fae5; color:var(--ok); }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; margin-top:8px; }
+  th, td { border:1px solid var(--line); padding:7px 9px; text-align:left; }
+  th { background:#f8fafc; color:var(--muted); font-weight:600; white-space:nowrap; }
+  tr:nth-child(even) td { background:#fcfdff; }
+  pre { background:#0f172a; color:#a5f3fc; padding:12px; border-radius:8px; overflow:auto; font-size:12px; max-height:320px; white-space:pre-wrap; word-break:break-all; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; }
+  .kpi { display:flex; gap:12px; flex-wrap:wrap; }
+  .kpi div { background:#f8fafc; border:1px solid var(--line); border-radius:8px; padding:10px 16px; min-width:120px; }
+  .kpi b { display:block; font-size:20px; color:var(--main2); }
+  .kpi span { font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>PMLS 网点物资管理系统</h1>
+    <div class="sub">Spring Boot 4 · MyBatis-Plus · JWT/RBAC · Redis · EasyExcel　|　单页演示台</div>
+  </div>
+  <div class="login">
+    <input type="text" id="user" value="admin" placeholder="用户名" style="width:110px">
+    <input type="password" id="pwd" value="123456" placeholder="密码" style="width:110px">
+    <button onclick="login()">登录</button>
+    <span id="badge" class="status">未登录</span>
+  </div>
+</header>
+
+<div class="layout">
+<nav id="nav">
+  <a class="on" data-t="overview">概览 / 库存</a>
+  <a data-t="materials">物资分页</a>
+  <a data-t="branches">网点分页</a>
+  <a data-t="dashboard">统计看板</a>
+  <a data-t="ops">入库 / 出库 / 调拨</a>
+  <a data-t="inventory">盘点流程</a>
+  <a data-t="excel">Excel 导入导出</a>
+</nav>
+
+<main>
+
+<!-- 概览 -->
+<section id="overview" class="on">
+  <h2>概览 / 库存查询</h2>
+  <div class="card">
+    <h3>当前库存</h3>
+    <div class="row">
+      <label>网点 ID</label><input type="number" id="ovBranch" placeholder="留空=全部（ADMIN）" style="width:180px">
+      <button onclick="loadStocks()">查询</button>
+      <button class="ghost" onclick="loadStocks(true)">刷新</button>
+    </div>
+    <div class="kpi" id="ovKpi"></div>
+    <div id="ovTable"></div>
+  </div>
+  <div class="card">
+    <h3>说明</h3>
+    <div class="tip">
+      · 用 <b>OPERATOR</b>（nanchang01 / 123456）登录时，即便在网点 ID 里填 3，服务端仍强制返回 branchId=1 的数据 —— 这是「网点级数据隔离」的现场演示。<br>
+      · 未登录直接查会返回 403，需要先点右上角「登录」拿 token。
+    </div>
+  </div>
+</section>
+
+<!-- 物资分页 -->
+<section id="materials">
+  <h2>物资分页 / CRUD</h2>
+  <div class="card">
+    <h3>分页查询</h3>
+    <div class="row">
+      <label>页码</label><input type="number" id="mCur" value="1" style="width:80px">
+      <label>每页</label><input type="number" id="mSize" value="5" style="width:80px">
+      <label>关键词</label><input type="text" id="mKw" placeholder="如：信封">
+      <label>分类</label><input type="number" id="mCat" placeholder="留空=全部" style="width:110px">
+      <button onclick="loadMaterials()">查询</button>
+    </div>
+    <div id="mInfo" class="tip"></div>
+    <div id="mTable"></div>
+  </div>
+  <div class="card">
+    <h3>新增物资（写入后会删除 Redis 缓存）</h3>
+    <div class="row">
+      <input type="text" id="mName" placeholder="名称">
+      <input type="number" id="mCat2" value="1" placeholder="分类ID" style="width:100px">
+      <input type="text" id="mSpec" placeholder="规格">
+      <input type="text" id="mUnit" value="个" placeholder="单位" style="width:80px">
+      <input type="number" id="mSafe" value="10" placeholder="安全库存" style="width:110px">
+      <button onclick="addMaterial()">新增</button>
+    </div>
+    <div id="mAddOut" class="tip"></div>
+  </div>
+</section>
+
+<!-- 网点分页 -->
+<section id="branches">
+  <h2>网点分页</h2>
+  <div class="card">
+    <div class="row">
+      <label>页码</label><input type="number" id="bCur" value="1" style="width:80px">
+      <label>每页</label><input type="number" id="bSize" value="5" style="width:80px">
+      <label>关键词</label><input type="text" id="bKw" placeholder="网点名">
+      <button onclick="loadBranches()">查询</button>
+    </div>
+    <div id="bInfo" class="tip"></div>
+    <div id="bTable"></div>
+  </div>
+</section>
+
+<!-- 看板 -->
+<section id="dashboard">
+  <h2>统计看板</h2>
+  <div class="card">
+    <div class="row"><button onclick="loadDash()">加载全部看板</button></div>
+    <div class="grid">
+      <div><h3>分类占比</h3><div id="d1"></div></div>
+      <div><h3>网点库存排行</h3><div id="d2"></div></div>
+      <div><h3>月度出入库趋势</h3><div id="d3"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 业务操作 -->
+<section id="ops">
+  <h2>入库 / 出库 / 调拨</h2>
+  <div class="grid">
+    <div class="card">
+      <h3>入库</h3>
+      <div class="row"><label>网点</label><input type="number" id="inB" value="1"></div>
+      <div class="row"><label>物资</label><input type="number" id="inM" value="1"></div>
+      <div class="row"><label>数量</label><input type="number" id="inQ" value="10"></div>
+      <div class="row"><label>备注</label><input type="text" id="inR" value="演示入库"></div>
+      <button onclick="stockOp('in')">提交入库</button>
+    </div>
+    <div class="card">
+      <h3>出库（带防超卖）</h3>
+      <div class="row"><label>网点</label><input type="number" id="outB" value="1"></div>
+      <div class="row"><label>物资</label><input type="number" id="outM" value="1"></div>
+      <div class="row"><label>数量</label><input type="number" id="outQ" value="1"></div>
+      <div class="row"><label>备注</label><input type="text" id="outR" value="演示出库"></div>
+      <button onclick="stockOp('out')">提交出库</button>
+    </div>
+    <div class="card">
+      <h3>调拨（事务原子性）</h3>
+      <div class="row"><label>源网点</label><input type="number" id="tF" value="1"></div>
+      <div class="row"><label>目标网点</label><input type="number" id="tT" value="2"></div>
+      <div class="row"><label>物资</label><input type="number" id="tM" value="1"></div>
+      <div class="row"><label>数量</label><input type="number" id="tQ" value="5"></div>
+      <button onclick="transfer()">提交调拨</button>
+    </div>
+  </div>
+  <div class="card"><h3>响应</h3><pre id="opsOut">等待操作…</pre></div>
+</section>
+
+<!-- 盘点 -->
+<section id="inventory">
+  <h2>盘点流程（创建 → 提交实盘 → 审核）</h2>
+  <div class="card">
+    <div class="row">
+      <label>网点</label><input type="number" id="ivB" value="1">
+      <label>备注</label><input type="text" id="ivR" value="演示盘点">
+      <button onclick="ivCreate()">① 创建盘点单</button>
+    </div>
+    <div class="row">
+      <label>盘点单ID</label><input type="text" id="ivId" placeholder="创建后自动填入" style="width:240px">
+      <label>物资</label><input type="number" id="ivM" value="1">
+      <label>实盘数</label><input type="number" id="ivQ" value="488">
+      <button onclick="ivSubmit()">② 提交实盘</button>
+      <button onclick="ivAudit()">③ 审核（需 ADMIN）</button>
+    </div>
+    <pre id="ivOut">等待操作…</pre>
+  </div>
+  <div class="tip">审核会用「审核时重算的账面数」与实盘数比对，生成 CHECK_LOSS / CHECK_GAIN 日志并回写库存。操作员审核会返回 403。</div>
+</section>
+
+<!-- Excel -->
+<section id="excel">
+  <h2>Excel 导入导出</h2>
+  <div class="card">
+    <h3>批量导入物资</h3>
+    <div class="row">
+      <input type="file" id="exFile" accept=".xlsx,.xls">
+      <button onclick="excelImport()">导入</button>
+    </div>
+    <div class="tip">先用 IDEA 跑 ExcelGenTest 生成 200 条测试文件；实测 200 条耗时 766 ms、0 错误。</div>
+    <pre id="exOut">等待操作…</pre>
+  </div>
+  <div class="card">
+    <h3>导出库存</h3>
+    <div class="row">
+      <input type="text" id="exUrl" value="/api/excel/stocks/export" style="width:280px">
+      <button onclick="excelExport()">下载</button>
+    </div>
+    <div class="tip">若 404，请对照 ExcelController 里导出接口的实际 @GetMapping 路径改上面输入框。</div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+let TOKEN = '';
+const BASE = '/api';
+
+function h(id){ return document.getElementById(id).value.trim(); }
+function setBadge(ok){
+  const b = document.getElementById('badge');
+  b.textContent = ok ? '已登录 ' + document.getElementById('user').value : '未登录';
+  b.className = 'status' + (ok ? ' ok' : '');
+}
+function headers(json){
+  const x = { 'Authorization': 'Bearer ' + TOKEN };
+  if (json) x['Content-Type'] = 'application/json; charset=utf-8';
+  return x;
+}
+async function call(url, opt){
+  if (!TOKEN) { alert('请先点右上角「登录」'); throw new Error('no token'); }
+  const r = await fetch(BASE + url, opt);
+  const txt = await r.text();
+  let body; try { body = JSON.parse(txt); } catch(e) { body = { raw: txt }; }
+  if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + txt);
+  return body;
+}
+function post(url, obj){
+  return call(url, { method:'POST', headers:headers(true), body:JSON.stringify(obj) });
+}
+function table(arr){
+  if (!Array.isArray(arr) || !arr.length) return '<div class="tip">无数据</div>';
+  const keys = Object.keys(arr[0]);
+  let s = '<table><thead><tr>' + keys.map(k=>'<th>'+k+'</th>').join('') + '</tr></thead><tbody>';
+  for (const row of arr) s += '<tr>' + keys.map(k=>'<td>'+(row[k]==null?'':String(row[k]))+'</td>').join('') + '</tr>';
+  return s + '</tbody></table>';
+}
+function show(id, v){
+  document.getElementById(id).innerHTML = (typeof v === 'string') ? v : JSON.stringify(v, null, 2);
+}
+function err(e){ return '❌ ' + (e && e.message ? e.message : e); }
+
+async function login(){
+  try {
+    const r = await fetch(BASE + '/auth/login', {
+      method:'POST', headers:{'Content-Type':'application/json; charset=utf-8'},
+      body:JSON.stringify({ username:h('user'), password:h('pwd') })
+    });
+    const b = await r.json();
+    if (b.code !== 200 || !b.data) throw new Error(b.msg || '登录失败');
+    TOKEN = b.data; setBadge(true);
+    loadStocks();
+  } catch(e){ alert(err(e)); }
+}
+
+async function loadStocks(){
+  const b = h('ovBranch');
+  try {
+    const r = await call('/stocks' + (b ? '?branchId=' + encodeURIComponent(b) : ''), { headers:headers() });
+    const d = r.data || [];
+    const total = d.reduce((s,x)=>s + (Number(x.quantity)||0), 0);
+    document.getElementById('ovKpi').innerHTML =
+      '<div><b>'+d.length+'</b><span>库存记录数</span></div>' +
+      '<div><b>'+total+'</b><span>总数量</span></div>' +
+      '<div><b>'+new Set(d.map(x=>x.branchId)).size+'</b><span>可见网点数</span></div>';
+    document.getElementById('ovTable').innerHTML = table(d);
+  } catch(e){ document.getElementById('ovTable').innerHTML = err(e); }
+}
+
+async function loadMaterials(){
+  const q = '?current='+(h('mCur')||1)+'&size='+(h('mSize')||5)+
+            '&keyword='+encodeURIComponent(h('mKw'))+
+            (h('mCat') ? '&categoryId='+encodeURIComponent(h('mCat')) : '');
+  try {
+    const r = await call('/materials/page'+q, { headers:headers() });
+    const d = r.data || {};
+    document.getElementById('mInfo').textContent =
+      'total='+d.total+'　current='+d.current+'　size='+d.size+'　本页 '+((d.records||[]).length)+' 条';
+    document.getElementById('mTable').innerHTML = table(d.records);
+  } catch(e){ document.getElementById('mTable').innerHTML = err(e); }
+}
+async function addMaterial(){
+  try {
+    const r = await post('/materials', {
+      name:h('mName'), categoryId:Number(h('mCat2')||1), spec:h('mSpec'),
+      unit:h('mUnit'), safeStock:Number(h('mSafe')||0)
+    });
+    document.getElementById('mAddOut').textContent = '✅ 新增成功：'+JSON.stringify(r.data)+
+      '　（已删除 Redis 缓存，可用 redis-cli EXISTS pmls:material:list 验证返回 0）';
+    loadMaterials();
+  } catch(e){ document.getElementById('mAddOut').textContent = err(e); }
+}
+
+async function loadBranches(){
+  const q = '?current='+(h('bCur')||1)+'&size='+(h('bSize')||5)+'&keyword='+encodeURIComponent(h('bKw'));
+  try {
+    const r = await call('/branches/page'+q, { headers:headers() });
+    const d = r.data || {};
+    document.getElementById('bInfo').textContent = 'total='+d.total+'　本页 '+((d.records||[]).length)+' 条';
+    document.getElementById('bTable').innerHTML = table(d.records);
+  } catch(e){ document.getElementById('bTable').innerHTML = err(e); }
+}
+
+async function loadDash(){
+  for (const [id,url] of [['d1','/dashboard/category-share'],['d2','/dashboard/branch-rank'],['d3','/dashboard/monthly-trend']]) {
+    try { const r = await call(url, { headers:headers() }); document.getElementById(id).innerHTML = table(r.data); }
+    catch(e){ document.getElementById(id).innerHTML = err(e); }
+  }
+}
+
+async function stockOp(kind){
+  const obj = kind==='in'
+    ? { branchId:Number(h('inB')), materialId:Number(h('inM')), quantity:Number(h('inQ')), remark:h('inR') }
+    : { branchId:Number(h('outB')), materialId:Number(h('outM')), quantity:Number(h('outQ')), remark:h('outR') };
+  try { show('opsOut', await post('/stocks/'+kind, obj)); loadStocks(); }
+  catch(e){ show('opsOut', err(e)); }
+}
+async function transfer(){
+  const obj = { fromBranchId:Number(h('tF')), toBranchId:Number(h('tT')),
+                materialId:Number(h('tM')), quantity:Number(h('tQ')) };
+  try { show('opsOut', await post('/stocks/transfer', obj)); loadStocks(); }
+  catch(e){ show('opsOut', err(e)); }
+}
+
+async function ivCreate(){
+  try { const r = await post('/inventory/create', { branchId:Number(h('ivB')), remark:h('ivR') });
+        document.getElementById('ivId').value = r.data; show('ivOut', r); }
+  catch(e){ show('ivOut', err(e)); }
+}
+async function ivSubmit(){
+  const id = h('ivId'); if(!id){ alert('请先创建盘点单'); return; }
+  try { show('ivOut', await post('/inventory/'+id+'/submit', {
+          items:[{ materialId:Number(h('ivM')), actualQty:Number(h('ivQ')), remark:'演示实盘' }] })); }
+  catch(e){ show('ivOut', err(e)); }
+}
+async function ivAudit(){
+  const id = h('ivId'); if(!id){ alert('请先创建盘点单'); return; }
+  try { show('ivOut', await post('/inventory/'+id+'/audit', {})); loadStocks(); }
+  catch(e){ show('ivOut', err(e)); }
+}
+
+async function excelImport(){
+  const f = document.getElementById('exFile').files[0];
+  if (!f) { alert('请先选择 xlsx 文件'); return; }
+  const fd = new FormData(); fd.append('file', f);
+  try {
+    const r = await fetch(BASE + '/excel/materials/import', {
+      method:'POST', headers:{ 'Authorization':'Bearer '+TOKEN }, body:fd });
+    show('exOut', await r.text());
+  } catch(e){ show('exOut', err(e)); }
+}
+function excelExport(){
+  if (!TOKEN) { alert('请先登录'); return; }
+  // 导出接口用原生 a 标签无法带 Authorization，改为 fetch + blob 下载
+  fetch(BASE + h('exUrl'), { headers:{ 'Authorization':'Bearer '+TOKEN } })
+    .then(r => { if(!r.ok) throw new Error('HTTP '+r.status); return r.blob(); })
+    .then(b => { const u = URL.createObjectURL(b); const a = document.createElement('a');
+                 a.href = u; a.download = 'stock-export.xlsx'; a.click(); URL.revokeObjectURL(u); })
+    .catch(e => show('exOut', err(e)));
+}
+
+// 导航切换
+document.getElementById('nav').addEventListener('click', e => {
+  if (e.target.tagName !== 'A') return;
+  document.querySelectorAll('#nav a').forEach(a=>a.classList.remove('on'));
+  e.target.classList.add('on');
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('on'));
+  document.getElementById(e.target.dataset.t).classList.add('on');
+});
+</script>
+</body>
+</html>

@@ -44,7 +44,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/**").hasRole("ADMIN")
                 .requestMatchers("/api/inventory/*/audit").hasRole("ADMIN")
                 // 默认拒绝：新增接口自动受保护，永远不要用 permitAll 兜底
-                .anyRequest().authenticated())
+                .requestMatchers("/", "/index.html", "/favicon.ico", "/css/**", "/js/**").permitAll().anyRequest().authenticated())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
